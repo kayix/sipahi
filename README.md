@@ -22,7 +22,7 @@ yarn add sipahi
 ```
 
 # Quickstart
-```
+```js
 import { Sipahi } from 'sipahi'
 
 const server = new Sipahi();
@@ -40,7 +40,7 @@ server.listen({ host: '0.0.0.0', port: 50000 });
 
 ## Create app
 
-```
+```js
 const server = new Sipahi({
   logger: false;
 });
@@ -61,7 +61,7 @@ server.close();
 You can add multiple proto files by calling addProto multiple times.
 
 Example:
-```
+```js
 // server.addProto('proto path', 'package name');
 
 server.addProto(__dirname + "/proto/product.service.proto"), "catalog_product");
@@ -72,7 +72,7 @@ server.addProto(__dirname + "/proto/order.service.proto"), "catalog_order");
 You need to define your methods in async function.
 
 Example:
-```
+```js
 server.use("GetProducts", async () => {
   return { products: [ { id: 1, title: "Sample product name" } ] };
 });
@@ -89,7 +89,7 @@ There are 3 types of middeware.
 3. -> onError
 
 #### Example 1: Calculate elapsed time in your method
-```
+```js
 // Set metadata so we can access it from after function execution.
 server.addHook("onRequest", async ({ metadata }) => {
   metadata.set("elapsed", new Date().getTime());
@@ -103,14 +103,14 @@ server.addHook("onResponse", async ({ metadata }) => {
 ```
 
 #### Example 2: Change request data before execution method
-```
+```js
 server.addHook("onRequest", async ({ request }) => {
   request.user_id = 12;
 });
 ```
 
 #### Example 3: Catch errors
-```
+```js
 server.addHook("onError", async ({ method, error }) => {
   console.log('Method: ', method);
   console.log('Error Message: ', error.message)
@@ -125,7 +125,7 @@ By default sihapi has pino as logging agent. You can configure it or use your ow
 
 You can pass your logging options as logging params when creating server. Logging options in [here](https://getpino.io/#/docs/api)
 
-```
+```js
 // Enable timestamp in logging
 const server = new Sipahi({
   logger: {
@@ -137,7 +137,7 @@ const server = new Sipahi({
 You can access logger agent in methods or middlewares.
 
 #### Access logger in methods.
-```
+```js
 server.use("Hello", async ({ logger }) => {
   logger.info('Hello method fired');
   return { message: "Hello" };
@@ -145,14 +145,14 @@ server.use("Hello", async ({ logger }) => {
 ```
 
 #### Access logger in middleware.
-```
+```js
 server.addHook("onError", async ({ error, logger }) => {
   logger.error({ message: error.message });
 });
 ```
 
 To disable built in logging agent, pass param as `false`
-```
+```js
 const server = new Sipahi({
   logger: false,
 });
