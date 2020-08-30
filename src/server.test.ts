@@ -9,7 +9,7 @@ let service;
 let client;
 beforeAll(() => {
   server = new Sipahi();
-  packageDefinition = protoLoader.loadSync(resolve("public/hello.proto"), {
+  packageDefinition = protoLoader.loadSync(resolve("example/proto/hello.proto"), {
     keepCase: true,
     longs: String,
     enums: String,
@@ -46,7 +46,7 @@ describe("Test grpc server", () => {
 
   test("add proto file", async () => {
     try {
-      server.addProto(resolve("public/hello.proto"), "hello");
+      server.addProto(resolve("example/proto/hello.proto"), "hello");
     } catch (e) {}
   });
 
