@@ -79,7 +79,7 @@ server.use("GetProducts", async () => {
 
 ```
 
-## Using Middleware
+## Middleware
 You can modify requests or responses via middleware. To add middleware use `addHook` method.
 
 There are 3 types of middeware.
