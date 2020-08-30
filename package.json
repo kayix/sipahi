@@ -2,7 +2,8 @@
   "name": "sipahi",
   "version": "1.0.0",
   "description": "Batteries included grpc server for NodeJS.",
-  "main": "server.js",
+  "main": "dist/server.js",
+  "types": "dist/server.d.ts",
   "author": "eddran",
   "keywords": [
     "grpc",
