@@ -1,6 +1,6 @@
 {
   "name": "sipahi",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Batteries included grpc server for NodeJS.",
   "main": "dist/server.js",
   "types": "dist/server.d.ts",
