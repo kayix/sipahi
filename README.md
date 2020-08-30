@@ -27,7 +27,7 @@ import { Sipahi } from 'sipahi'
 
 const server = new Sipahi();
 
-server.addProto(__dirname + "/proto/hello.proto"), "hello");
+server.addProto(__dirname + "/proto/hello.proto", "hello");
 
 server.use("Hello", async () => {
   return { message: "Hello response" };
