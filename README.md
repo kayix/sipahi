@@ -64,8 +64,8 @@ Example:
 ```js
 // server.addProto('proto path', 'package name');
 
-server.addProto(__dirname + "/proto/product.service.proto"), "catalog_product");
-server.addProto(__dirname + "/proto/order.service.proto"), "catalog_order");
+server.addProto(__dirname + "/proto/product.service.proto", "catalog_product");
+server.addProto(__dirname + "/proto/order.service.proto", "catalog_order");
 ```
 
 ## Define method for services
