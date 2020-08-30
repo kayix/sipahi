@@ -41,9 +41,7 @@ server.listen({ host: '0.0.0.0', port: 50000 });
 ## Create app
 
 ```js
-const server = new Sipahi({
-  logger: false;
-});
+const server = new Sipahi();
 
 const params = {
   host: '0.0.0.0',
