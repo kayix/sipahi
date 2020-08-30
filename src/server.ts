@@ -108,7 +108,7 @@ export class Sipahi {
         })
         .then(() => {
           return prmFnc({
-            data: call.request,
+            request: call.request,
             // @ts-ignore
             metadata: call.metadata,
             logger: self.logger,
