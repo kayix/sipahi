@@ -17,11 +17,11 @@ interface IConstructor {
   logger: boolean | LoggerOptions | CustomLogger;
 }
 
-declare type UseHandler = (myArgument: { request: object; metadata: Metadata; logger: Logger }) => any;
+declare type UseHandler = (myArgument: { request: any; metadata: Metadata; logger: Logger }) => any;
 
-declare type ReqHookHandler = (myArgument: { request: object; metadata: Metadata; logger: Logger }) => any;
+declare type ReqHookHandler = (myArgument: { request: any; metadata: Metadata; logger: Logger }) => any;
 
-declare type ResHookHandler = (myArgument: { request: object; response: object; metadata: Metadata; logger: Logger }) => any;
+declare type ResHookHandler = (myArgument: { request: any; response: any; metadata: Metadata; logger: Logger }) => any;
 
 declare type ErrHookHandler = (myArgument: { method: string; error: Error; logger: Logger }) => any;
 
