@@ -4,7 +4,7 @@ Batteries included grpc server for NodeJS. Supports middleware, error handling a
 
 All codebase is 200 lines of code. Simple & flexible best for microservices.
 
-### v1.1 Updates:
+### Updates:
 - Added grpc client
 - Removed onResponse middleware
 
