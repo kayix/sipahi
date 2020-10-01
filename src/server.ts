@@ -1,27 +1,28 @@
 import * as pino from "pino";
+import { Client } from "./client";
 import { ServiceError } from "./error";
 import { Logger, LoggerOptions } from "pino";
 import { ServerUnaryCall } from "@grpc/grpc-js/src/server-call";
-import { Server, ServerCredentials, status, Metadata } from "@grpc/grpc-js";
 import { getServiceNames, loadPackage, lookupPackage } from "./loader";
+import { Server, ServerCredentials, status, Metadata } from "@grpc/grpc-js";
 
 export { status };
 
+export { Client };
+
+
+
 export { ServiceError as SipahiError };
 
-interface CustomLogger extends LoggerOptions {
-  properties: { [key: string]: any };
-}
-
 interface IConstructor {
-  logger: boolean | LoggerOptions | CustomLogger;
+  logger: boolean;
 }
 
 declare type UseHandler = (myArgument: { request: any; metadata: Metadata; logger: Logger }) => any;
 
 declare type ReqHookHandler = (myArgument: { request: any; metadata: Metadata; logger: Logger }) => any;
 
-declare type ResHookHandler = (myArgument: { request: any; response: any; metadata: Metadata; logger: Logger }) => any;
+//declare type ResHookHandler = (myArgument: { request: any; response: any; metadata: Metadata; logger: Logger }) => any;
 
 declare type ErrHookHandler = (myArgument: { method: string; error: Error; logger: Logger }) => any;
 
@@ -30,42 +31,40 @@ export class Sipahi {
   private logger: Logger;
   private readonly listObjs: { [key: string]: any };
   private readonly reqHooks: any[];
-  private readonly resHooks: any[];
-  private readonly errHooks: any[];
+  //private readonly resHooks: any[];
+  private errHook: any;
 
   private protoList: { path: string; name: string }[];
 
-  constructor(params: IConstructor = { logger: {} }) {
+  constructor() {
     this.listObjs = {};
     this.reqHooks = [];
-    this.resHooks = [];
-    this.errHooks = [];
+    //this.resHooks = [];
+    //   this.errHooks = [];
     this.protoList = [];
     this.initialize();
-    this.initLogging(params.logger);
+    this.initLogging({});
   }
 
   private initLogging(config: any) {
-    if (config) {
-      config = {
-        ...config,
-        ...{
-          timestamp: false,
-          messageKey: "message",
-          base: null,
-          formatters: {
-            level(label) {
-              return {
-                level: label,
-              };
-            },
+    config = {
+      ...config,
+      ...{
+        timestamp: false,
+        messageKey: "message",
+        base: null,
+        formatters: {
+          level(label) {
+            return {
+              level: label,
+            };
           },
         },
-      };
+      },
+    };
 
-      let baseLogger = pino(config);
-      this.logger = baseLogger.child(config.properties ? config.properties : {});
-    }
+    let baseLogger = pino(config);
+    this.logger = baseLogger.child(config.properties ? config.properties : {});
   }
 
   private initialize() {
@@ -85,17 +84,12 @@ export class Sipahi {
     }
   }
 
+  /*
   private async getAfterHooks(params: any) {
     for (let resHook of this.resHooks) {
       await resHook(params);
     }
-  }
-
-  private async getErrorHooks(params: any) {
-    for (let errHook of this.errHooks) {
-      await errHook(params);
-    }
-  }
+  }*/
 
   use(method: string, prmFnc: UseHandler): void {
     let self = this;
@@ -114,7 +108,8 @@ export class Sipahi {
             logger: self.logger,
           })
             .then((mainResp) => {
-              self
+              callback(null, mainResp);
+              /*self
                 .getAfterHooks({
                   request: call.request,
                   response: mainResp,
@@ -126,16 +121,12 @@ export class Sipahi {
                 })
                 .catch((resErr) => {
                   callback(resErr, null);
-                });
+                });*/
             })
             .catch((error) => {
-              //  self.emit("error", { method, error });
-              self
-                .getErrorHooks({ method, error, logger: self.logger })
-                .then(callback(error, null))
-                .catch((hookErr) => {
-                  callback(error, hookErr);
-                });
+              if (self.errHook) {
+                self.errHook({ method, error, logger: self.logger }).then().catch();
+              }
             });
         })
         .catch((reqErr) => {
@@ -144,18 +135,20 @@ export class Sipahi {
     };
   }
 
-  addHook(name: "onRequest" | "onResponse" | "onError", fn: ReqHookHandler | ResHookHandler | ErrHookHandler): void {
+  addHook(name: "onRequest" | /*| "onResponse"*/ "onError", fn: ReqHookHandler | /*| ResHookHandler*/ ErrHookHandler): void {
     switch (name) {
       case "onRequest":
         this.reqHooks.push(fn);
         break;
 
+      /*
       case "onResponse":
         this.resHooks.push(fn);
         break;
+        */
 
       case "onError":
-        this.errHooks.push(fn);
+        this.errHook = fn;
         break;
     }
   }

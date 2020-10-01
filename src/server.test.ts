@@ -1,12 +1,13 @@
 import { resolve } from "path";
+import { Client } from "./client";
 import { Sipahi } from "./server";
 import * as protoLoader from "@grpc/proto-loader";
-import { loadPackageDefinition, credentials } from "@grpc/grpc-js";
+import { loadPackageDefinition } from "@grpc/grpc-js";
 
 let server: Sipahi;
 let packageDefinition;
 let service;
-let client;
+let client: Client;
 beforeAll(() => {
   server = new Sipahi();
   packageDefinition = protoLoader.loadSync(resolve("example/proto/hello.proto"), {
@@ -16,21 +17,12 @@ beforeAll(() => {
     arrays: true,
   });
   service = loadPackageDefinition(packageDefinition).hello;
-  client = new service.HelloService("0.0.0.0:3010", credentials.createInsecure());
+  client = new Client({ proto: resolve("example/proto/hello.proto"), package: "hello", service: "HelloService", host: "0.0.0.0", port: 3010 });
 });
 
 afterAll(() => {
   server.close();
 });
-
-function makeRequest(): Promise<any> {
-  return new Promise((resolve, reject) => {
-    client.hello({}, (err, response) => {
-      if (err) return reject(err);
-      resolve(response);
-    });
-  });
-}
 
 describe("Test grpc server", () => {
   test("check server is listening", async () => {
@@ -60,7 +52,7 @@ describe("Test grpc server", () => {
 
   test("call method from client", async () => {
     await server.listen({ port: 3010 });
-    let response = await makeRequest();
+    let response = await client.unary("Hello", { name: "Sample Name" });
     expect(response.message).toBe("Hello response");
   });
 });
