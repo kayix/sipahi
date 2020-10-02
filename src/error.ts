@@ -8,3 +8,7 @@ export class ServiceError extends Error {
     this.code = errStatus ? errStatus : status.INTERNAL;
   }
 }
+
+export function error(message: string, status?: status) {
+  throw new ServiceError(message, status);
+}

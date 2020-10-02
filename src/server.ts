@@ -1,16 +1,14 @@
+import "./env";
 import * as pino from "pino";
+import { error } from "./error";
 import { Client } from "./client";
 import { ServiceError } from "./error";
-import { Logger, LoggerOptions } from "pino";
+import { Logger } from "pino";
 import { ServerUnaryCall } from "@grpc/grpc-js/src/server-call";
 import { getServiceNames, loadPackage, lookupPackage } from "./loader";
 import { Server, ServerCredentials, status, Metadata } from "@grpc/grpc-js";
 
-export { status };
-
-export { Client };
-
-
+export { status, error, Client };
 
 export { ServiceError as SipahiError };
 
@@ -18,7 +16,13 @@ interface IConstructor {
   logger: boolean;
 }
 
-declare type UseHandler = (myArgument: { request: any; metadata: Metadata; logger: Logger }) => any;
+export interface UnaryCall {
+  request: any;
+  metadata: Metadata;
+  logger: Logger;
+}
+
+export declare type UnaryHandler = (myArgument: { request: any; metadata: Metadata; logger: Logger }) => any;
 
 declare type ReqHookHandler = (myArgument: { request: any; metadata: Metadata; logger: Logger }) => any;
 
@@ -50,7 +54,8 @@ export class Sipahi {
     config = {
       ...config,
       ...{
-        timestamp: false,
+        prettyPrint: process.env.NODE_ENV !== "production",
+        timestamp: true,
         messageKey: "message",
         base: null,
         formatters: {
@@ -91,7 +96,7 @@ export class Sipahi {
     }
   }*/
 
-  use(method: string, prmFnc: UseHandler): void {
+  use(method: string, prmFnc: UnaryHandler): void {
     let self = this;
     this.listObjs[method] = function (call: ServerUnaryCall<any, any>, callback) {
       self
@@ -127,6 +132,7 @@ export class Sipahi {
               if (self.errHook) {
                 self.errHook({ method, error, logger: self.logger }).then().catch();
               }
+              callback(error, null);
             });
         })
         .catch((reqErr) => {
@@ -167,9 +173,15 @@ export class Sipahi {
     if (!args.host) {
       args.host = "0.0.0.0";
     }
+
     if (!args.port) {
-      throw new Error("You need to define port argument!");
+      if (process.env.PORT) {
+        args.port = Number(process.env.PORT);
+      } else {
+        throw new Error("You need to define port argument!");
+      }
     }
+
     this.syncMethods();
     return new Promise((resolve, reject) => {
       this.server.bindAsync(args.host + ":" + args.port, ServerCredentials.createInsecure(), (err) => {

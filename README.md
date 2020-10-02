@@ -7,6 +7,7 @@ All codebase is 200 lines of code. Simple & flexible best for microservices.
 ### Updates:
 - Added grpc client
 - Removed onResponse middleware
+- Pretty log format for development
 
 # Features
 
@@ -42,8 +43,9 @@ const server = new Sipahi();
 server.addProto(__dirname + "/proto/hello.proto", "hello");
 
 // Add method 
-server.use("Hello", async () => {
-  return { message: Math.random().toString().slice(-8) };
+server.use("Hello", async ({ request, logger }) => {
+  logger.info('Log in here')
+  return { message: 'Hello you bro! ' + request.name };
 });
 
 // Listen errors
@@ -87,9 +89,21 @@ You need to define your methods in async function.
 Example:
 
 ```js
-server.use("GetProducts", async () => {
+server.use("GetProducts", async ({ request, logger, metadata }) => {
   return { products: [{ id: 1, title: "Sample product name" }] };
 });
+
+
+or 
+
+import { UnaryCall } from 'sipahi'
+
+async function getProducts({ request, logger, metadata }: UnaryCall) {
+  return { products: [{ id: 1, title: "Sample product name" }] };
+}
+
+server.use("GetProducts", getProducts);
+
 ```
 
 ## Middleware
@@ -122,18 +136,17 @@ server.addHook("onError", async ({ method, error, logger }) => {
 ```
 
 ## Return Error
-Sipahi includes SipahiError to throw error inside methods.
+Sipahi includes error helper to throw error inside methods.
 
 ```js
-import { SipahiError, status } from 'sipahi'
+import { error, status } from 'sipahi'
 
 // Define sample method
 
 server.use("GetProducts", async () => {
   
-  throw new SipahiError('Sample error message', status.ALREADY_EXISTS)
+  return Promise.reject(error('something gonna wrong', status.ALREADY_EXISTS))
 
-  return { products: [{ id: 1, title: "Sample product name" }] };
 });
 ```
 

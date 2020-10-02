@@ -1,6 +1,6 @@
 {
   "name": "sipahi",
-  "version": "1.0.5",
+  "version": "1.0.6",
   "description": "Batteries included grpc server for NodeJS.",
   "main": "dist/server.js",
   "types": "dist/server.d.ts",
@@ -26,7 +26,6 @@
     "build": "tsc",
     "prepare": "npm run build",
     "prepublishOnly": "npm test",
-    "dev:client": "ts-node src/try.ts"
   },
   "devDependencies": {
     "@types/jest": "^26.0.10",
@@ -40,8 +39,10 @@
   "dependencies": {
     "@grpc/grpc-js": "^1.1.5",
     "@grpc/proto-loader": "^0.5.5",
+    "dotenv": "^8.2.0",
     "google-protobuf": "^3.13.0",
-    "pino": "^6.5.1"
+    "pino": "^6.5.1",
+    "pino-pretty": "^4.2.1"
   },
   "prettier": {
     "printWidth": 180
