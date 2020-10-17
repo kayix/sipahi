@@ -26,7 +26,7 @@
     "build": "tsc",
     "prepare": "npm run build",
     "prepublishOnly": "npm test",
-    "dev": "ts-node src/supper.ts"
+    "dev": "ts-node example/server.ts"
   },
   "devDependencies": {
     "@types/jest": "^26.0.10",

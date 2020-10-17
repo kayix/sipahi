@@ -5,32 +5,18 @@ import { Server, ServerCredentials, ServerUnaryCall, status } from "grpc";
 
 import { getServiceNames, loadPackage, lookupPackage } from "./utils/loader";
 
-import * as pino from "pino";
 import { plainToClass } from "class-transformer";
 import { validate } from "class-validator";
 import { initIoc } from "./ioc/container";
 
 import { Method, Validate } from "./utils/decorators";
-import { Logger } from "pino";
 
-export { Method, Validate, Logger, status };
+/**
+ * Base Services
+ */
+import { Logger } from "./services/logger";
 
-let baseLogger = pino({
-  ...{
-    prettyPrint: process.env.NODE_ENV !== "production",
-    timestamp: true,
-    messageKey: "message",
-    base: null,
-    formatters: {
-      level(label) {
-        return {
-          level: label,
-        };
-      },
-    },
-  },
-});
-export const logger = baseLogger.child({ level: process.env.NODE_ENV === "production" ? "warn" : "debug" });
+export { Method, Validate, status, Logger };
 
 interface Proto {
   path: string;
@@ -47,30 +33,12 @@ export class Sipahi {
     this.protoList = [];
     this.providers = [];
     this.initialize();
-    //  this.initLogger({});
+    this.initServices();
   }
-  /**
-  private initLogger(config: any) {
-    config = {
-      ...config,
-      ...{
-        prettyPrint: process.env.NODE_ENV !== "production",
-        timestamp: true,
-        messageKey: "message",
-        base: null,
-        formatters: {
-          level(label) {
-            return {
-              level: label,
-            };
-          },
-        },
-      },
-    };
 
-    let baseLogger = pino(config);
-    this.logger = baseLogger.child(config.properties ? config.properties : { level: process.env.NODE_ENV === "production" ? "warn" : "debug" })
-  };*/
+  private initServices() {
+    this.addProvider(Logger);
+  }
 
   private initialize() {
     this.server = new Server({

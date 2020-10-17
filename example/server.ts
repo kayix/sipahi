@@ -1,25 +1,26 @@
-import { Sipahi, Method, logger, Validate } from "./server";
 import { resolve } from "path";
-import { injectable } from "inversify";
-import { error } from "./utils/error";
-import { IsEmail, IsNotEmpty } from "class-validator";
+import { inject, injectable } from "inversify";
+import { IsEmail } from "class-validator";
+import { Method, Validate } from "../src/utils/decorators";
+import { Sipahi, Logger } from "../src/server";
 
 class LoginInput {
   @IsEmail()
-  email: string;
-
-  @IsNotEmpty()
-  password: string;
+  name: string;
 }
 
 @injectable()
 export class TestService {
+  private logger: Logger;
+  constructor(@inject(Logger) logger: Logger) {
+    this.logger = logger;
+  }
+
   @Validate(LoginInput)
   @Method("HelloService", "Hello")
-  getHello(request: { name: string }, meta) {
+  getHello(request: { name: string }, { logger }) {
+    this.logger.error("aaaa", 22, 242, 2424242);
     return new Promise((resolve, reject) => {
-      logger.error("this log level is error");
-
       resolve({ message: request.name });
     });
 
@@ -27,7 +28,7 @@ export class TestService {
   }
 }
 
-const server = new Sipahi({});
+const server = new Sipahi();
 
 server.addProto(resolve("example/proto/hello.proto"), "hello");
 server.addProvider(TestService);
