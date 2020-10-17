@@ -31,7 +31,7 @@ export class TestService {
 const server = new Sipahi();
 
 server.addProto(resolve("example/proto/hello.proto"), "hello");
-server.addProvider(TestService);
+ server.addProvider(TestService);
 
 server.listen({ port: 5009 }).then(() => {
   console.log("listening on: 5009");

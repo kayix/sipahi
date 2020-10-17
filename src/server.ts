@@ -123,7 +123,9 @@ export class Sipahi {
       const pkg = lookupPackage(loadPackage(proto.path), proto.package);
       for (const serviceName of getServiceNames(pkg)) {
         const serviceData = (pkg[serviceName] as any) as any;
-        this.server.addService(serviceData.service, result[serviceName]);
+        if (result[serviceName]) {
+          this.server.addService(serviceData.service, result[serviceName]);
+        }
       }
     });
   }
