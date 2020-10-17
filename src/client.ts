@@ -1,14 +1,6 @@
-import { dotProp } from "./helpers";
-import { loadSync } from "@grpc/proto-loader";
-import { credentials, loadPackageDefinition } from "@grpc/grpc-js";
-
-export function protoLoad(protoPath: string) {
-  return loadSync(protoPath, {
-    keepCase: true,
-    defaults: true,
-    oneofs: true,
-  });
-}
+import { dotProp } from "./utils/helpers";
+import * as protoLoader from "@grpc/proto-loader";
+import { credentials, loadPackageDefinition } from "grpc";
 
 export class Client {
   private readonly _protoPath: string;
@@ -23,7 +15,7 @@ export class Client {
   }
 
   private connect(params: { host: string; port: number; credentials?: any }) {
-    const getPkg = loadPackageDefinition(protoLoad(this._protoPath));
+    const getPkg = loadPackageDefinition(protoLoader.loadSync(this._protoPath));
     const service = dotProp(getPkg, this._pkgName);
     this._client = new service[this._serviceName](params.host + ":" + params.port, params.credentials ? credentials.createInsecure() : credentials.createInsecure());
   }

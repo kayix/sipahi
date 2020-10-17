@@ -1,56 +1,56 @@
-import "./env";
+import "./utils/env";
+import "reflect-metadata";
+
+import { Server, ServerCredentials, ServerUnaryCall, status } from "grpc";
+
+import { getServiceNames, loadPackage, lookupPackage } from "./utils/loader";
+
 import * as pino from "pino";
-import { error } from "./error";
-import { Client } from "./client";
-import { ServiceError } from "./error";
+import { plainToClass } from "class-transformer";
+import { validate } from "class-validator";
+import { initIoc } from "./ioc/container";
+
+import { Method, Validate } from "./utils/decorators";
 import { Logger } from "pino";
-import { ServerUnaryCall } from "@grpc/grpc-js/src/server-call";
-import { getServiceNames, loadPackage, lookupPackage } from "./loader";
-import { Server, ServerCredentials, status, Metadata } from "@grpc/grpc-js";
 
-export { status, error, Client };
+export { Method, Validate, Logger, status };
 
-export { ServiceError as SipahiError };
+let baseLogger = pino({
+  ...{
+    prettyPrint: process.env.NODE_ENV !== "production",
+    timestamp: true,
+    messageKey: "message",
+    base: null,
+    formatters: {
+      level(label) {
+        return {
+          level: label,
+        };
+      },
+    },
+  },
+});
+export const logger = baseLogger.child({ level: process.env.NODE_ENV === "production" ? "warn" : "debug" });
 
-interface IConstructor {
-  logger: boolean;
+interface Proto {
+  path: string;
+  package: string;
 }
-
-export interface UnaryCall {
-  request: any;
-  metadata: Metadata;
-  logger: Logger;
-}
-
-export declare type UnaryHandler = (myArgument: { request: any; metadata: Metadata; logger: Logger }) => any;
-
-declare type ReqHookHandler = (myArgument: { request: any; metadata: Metadata; logger: Logger }) => any;
-
-//declare type ResHookHandler = (myArgument: { request: any; response: any; metadata: Metadata; logger: Logger }) => any;
-
-declare type ErrHookHandler = (myArgument: { method: string; error: Error; logger: Logger }) => any;
 
 export class Sipahi {
-  public server: Server;
-  private logger: Logger;
-  private readonly listObjs: { [key: string]: any };
-  private readonly reqHooks: any[];
-  //private readonly resHooks: any[];
-  private errHook: any;
+  private protoList: Proto[];
+  private providers: Function[];
 
-  private protoList: { path: string; name: string }[];
+  public server: Server;
 
   constructor() {
-    this.listObjs = {};
-    this.reqHooks = [];
-    //this.resHooks = [];
-    //   this.errHooks = [];
     this.protoList = [];
+    this.providers = [];
     this.initialize();
-    this.initLogging({});
+    //  this.initLogger({});
   }
-
-  private initLogging(config: any) {
+  /**
+  private initLogger(config: any) {
     config = {
       ...config,
       ...{
@@ -69,8 +69,8 @@ export class Sipahi {
     };
 
     let baseLogger = pino(config);
-    this.logger = baseLogger.child(config.properties ? config.properties : {});
-  }
+    this.logger = baseLogger.child(config.properties ? config.properties : { level: process.env.NODE_ENV === "production" ? "warn" : "debug" })
+  };*/
 
   private initialize() {
     this.server = new Server({
@@ -79,99 +79,94 @@ export class Sipahi {
     });
   }
 
-  addProto(protoPath: string, packageName: string) {
-    this.protoList.push({ path: protoPath, name: packageName });
+  public addProto(path: string, pkg: string) {
+    this.protoList.push({ path, package: pkg });
   }
 
-  private async getBeforeHooks(params: any) {
-    for (let reqHook of this.reqHooks) {
-      await reqHook(params);
-    }
+  public addProvider(provider: Function) {
+    this.providers.push(provider);
   }
 
-  /*
-  private async getAfterHooks(params: any) {
-    for (let resHook of this.resHooks) {
-      await resHook(params);
-    }
-  }*/
-
-  use(method: string, prmFnc: UnaryHandler): void {
-    let self = this;
-    this.listObjs[method] = function (call: ServerUnaryCall<any, any>, callback) {
-      self
-        .getBeforeHooks({
-          request: call.request,
-          metadata: call.metadata,
-          logger: self.logger,
-        })
-        .then(() => {
-          return prmFnc({
-            request: call.request,
-            // @ts-ignore
-            metadata: call.metadata,
-            logger: self.logger,
-          })
-            .then((mainResp) => {
-              callback(null, mainResp);
-              /*self
-                .getAfterHooks({
-                  request: call.request,
-                  response: mainResp,
-                  metadata: call.metadata,
-                  logger: self.logger,
-                })
-                .then(() => {
-                  callback(null, mainResp);
-                })
-                .catch((resErr) => {
-                  callback(resErr, null);
-                });*/
-            })
-            .catch((error) => {
-              if (self.errHook) {
-                self.errHook({ method, error, logger: self.logger }).then().catch();
-              }
-              callback(error, null);
-            });
-        })
-        .catch((reqErr) => {
-          callback(reqErr, null);
-        });
-    };
-  }
-
-  addHook(name: "onRequest" | /*| "onResponse"*/ "onError", fn: ReqHookHandler | /*| ResHookHandler*/ ErrHookHandler): void {
-    switch (name) {
-      case "onRequest":
-        this.reqHooks.push(fn);
-        break;
-
-      /*
-      case "onResponse":
-        this.resHooks.push(fn);
-        break;
-        */
-
-      case "onError":
-        this.errHook = fn;
-        break;
-    }
+  public addProviders(providers: Function[]) {
+    this.providers = [...providers];
   }
 
   private syncMethods() {
+    const { container, serverMethods } = initIoc(this.providers);
+
+    let resolveClasses: { [key: string]: any } = {};
+
+    serverMethods.forEach((serverMethod) => {
+      resolveClasses[serverMethod.className] = container.get(serverMethod.className);
+    });
+
+    const result: { [key: string]: any } = {};
+    serverMethods.forEach((serverMethod) => {
+      serverMethod.methods.forEach((method) => {
+        if (!result[method.proto.service]) {
+          result[method.proto.service] = {};
+        }
+
+        result[method.proto.service][method.proto.method] = function (call: ServerUnaryCall<any>, callback) {
+          if (method.validator) {
+            let classData = plainToClass(method.validator, call.request);
+            validate(classData)
+              .then((errors) => {
+                if (errors.length > 0) {
+                  callback({
+                    message: JSON.stringify(
+                      errors.map((error) => {
+                        let obj: any = {};
+                        obj[error.property] = Object.values(error.constraints)[0];
+                        return obj;
+                      })
+                    ),
+                    code: status.INVALID_ARGUMENT,
+                  });
+                } else {
+                  resolveClasses[serverMethod.className]
+                    [method.funcName](call.request, call.metadata)
+                    .then((resp) => {
+                      callback(null, resp);
+                    })
+                    .catch((err) => {
+                      callback({ message: err.message, code: err.code }, null);
+                    });
+                }
+              })
+              .catch((err) => {
+                callback(err, status.INTERNAL);
+              });
+          } else {
+            resolveClasses[serverMethod.className]
+              [method.funcName](call.request, call.metadata)
+              .then((resp) => {
+                callback(null, resp);
+              })
+              .catch((err) => {
+                callback({ message: err.message, code: err.code }, null);
+              });
+          }
+        };
+      });
+    });
+
     this.protoList.forEach((proto) => {
-      const pkg = lookupPackage(loadPackage(proto.path), proto.name);
+      const pkg = lookupPackage(loadPackage(proto.path), proto.package);
       for (const serviceName of getServiceNames(pkg)) {
         const serviceData = (pkg[serviceName] as any) as any;
-        this.server.addService(serviceData.service, this.listObjs);
+        this.server.addService(serviceData.service, result[serviceName]);
       }
     });
   }
 
   listen(args: { host?: string; port?: number } = {}): Promise<{ host: string; port: number }> {
     if (!args.host) {
-      args.host = "0.0.0.0";
+      if (process.env.HOST) {
+        args.host = process.env.HOST;
+      } else {
+        args.host = "0.0.0.0";
+      }
     }
 
     if (!args.port) {
@@ -182,8 +177,8 @@ export class Sipahi {
       }
     }
 
-    this.syncMethods();
-    return new Promise((resolve, reject) => {
+    return new Promise(async (resolve, reject) => {
+      this.syncMethods();
       this.server.bindAsync(args.host + ":" + args.port, ServerCredentials.createInsecure(), (err) => {
         if (err) {
           return reject(err);

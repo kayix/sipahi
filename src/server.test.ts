@@ -1,8 +1,10 @@
 import { resolve } from "path";
-import { Client } from "./client";
 import { Sipahi } from "./server";
+import { Client } from "./client";
 import * as protoLoader from "@grpc/proto-loader";
-import { loadPackageDefinition } from "@grpc/grpc-js";
+import { loadPackageDefinition } from "grpc";
+
+import { TestService } from "./test-service";
 
 let server: Sipahi;
 let packageDefinition;
@@ -25,34 +27,16 @@ afterAll(() => {
 });
 
 describe("Test grpc server", () => {
-  test("check server is listening", async () => {
-    expect.assertions(1);
-    try {
-      const { port } = await server.listen({ port: 3010 });
-      expect(port).toBe(3010);
-      server.close();
-    } catch (e) {
-      expect(e).toMatch("error");
-    }
-  });
-
   test("add proto file", async () => {
     try {
       server.addProto(resolve("example/proto/hello.proto"), "hello");
-    } catch (e) {}
-  });
-
-  test("add method to server", async () => {
-    try {
-      server.use("Hello", async () => {
-        return { message: "Hello response" };
-      });
+      server.addProvider(TestService);
+      const { port } = await server.listen({ port: 3010 });
     } catch (e) {}
   });
 
   test("call method from client", async () => {
-    await server.listen({ port: 3010 });
     let response = await client.unary("Hello", { name: "Sample Name" });
-    expect(response.message).toBe("Hello response");
+    expect(response.message).toBe("Sample Name");
   });
 });

@@ -1,5 +1,5 @@
 import * as protoLoader from "@grpc/proto-loader";
-import { GrpcObject, loadPackageDefinition } from "@grpc/grpc-js";
+import { GrpcObject, loadPackageDefinition } from "grpc";
 
 export function lookupPackage(root: GrpcObject, packageName: string) {
   let pkg = root;
