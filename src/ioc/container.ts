@@ -16,17 +16,13 @@ export function initIoc(services: any[]): { container: Container; serverMethods:
   const container = new Container();
 
   /**
-   * Define base services
-   */
-  const baseServices: string[] = ["Logger"];
-  /**
    * Load classes to ioc container
    */
   services.forEach((service) => {
-    if (baseServices.includes(service.name)) {
-      container.bind(service).toSelf();
-    } else {
+    if (Reflect.hasOwnMetadata("method", service)) {
       container.bind(service.name).to(service);
+    } else {
+      container.bind(service).toSelf();
     }
   });
 

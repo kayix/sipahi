@@ -11,12 +11,14 @@ import { initIoc } from "./ioc/container";
 
 import { Method, Validate } from "./utils/decorators";
 
+import { error } from "./utils/error";
+
 /**
  * Base Services
  */
 import { Logger } from "./services/logger";
 
-export { Method, Validate, status, Logger };
+export { Method, Validate, status, error, Logger };
 
 interface Proto {
   path: string;

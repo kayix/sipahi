@@ -1,2 +1,4 @@
 src
 example
+.idea
+yarn-error.log
