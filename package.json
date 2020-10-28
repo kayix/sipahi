@@ -1,6 +1,6 @@
 {
   "name": "sipahi",
-  "version": "1.1.0-beta.3",
+  "version": "1.1.0-beta.10",
   "description": "Batteries included grpc server for NodeJS.",
   "main": "dist/server.js",
   "types": "dist/server.d.ts",
@@ -26,10 +26,15 @@
     "build": "tsc",
     "prepare": "npm run build",
     "prepublishOnly": "npm test",
-    "dev": "ts-node example/server.ts"
+    "dev": "ts-node example/server.ts",
+    "nest": "ts-node nest/tester.ts",
+    "test-nest": "ts-node test-nest/index.ts",
+    "test-inversify": "ts-node test-inversify/index.ts"
   },
   "devDependencies": {
+    "@types/i18n": "^0.8.7",
     "@types/jest": "^26.0.10",
+    "@types/lodash": "^4.14.162",
     "@types/pino": "^6.3.0",
     "jest": "^26.4.2",
     "prettier": "^2.1.1",
@@ -39,15 +44,21 @@
   },
   "dependencies": {
     "@grpc/proto-loader": "^0.5.5",
+    "@nestjs/common": "^7.4.4",
+    "@nestjs/core": "^7.4.4",
     "class-transformer": "^0.3.1",
     "class-validator": "^0.12.2",
     "dotenv": "^8.2.0",
     "google-protobuf": "^3.13.0",
     "grpc": "^1.24.3",
-    "inversify": "^5.0.1",
+    "i18n": "^0.13.2",
+    "i18next": "^19.8.2",
+    "i18next-fs-backend": "^1.0.7",
+    "lodash": "^4.17.20",
     "pino": "^6.5.1",
     "pino-pretty": "^4.2.1",
-    "reflect-metadata": "^0.1.13"
+    "reflect-metadata": "^0.1.13",
+    "rxjs": "^6.6.3"
   },
   "prettier": {
     "printWidth": 180

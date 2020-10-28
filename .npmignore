@@ -2,3 +2,10 @@ src
 example
 .idea
 yarn-error.log
+src-old
+test-inversify
+test-nest
+benchmark
+nest
+test
+sipahi-inversify

@@ -1,31 +1,46 @@
-import "./utils/env";
-import "reflect-metadata";
-
 import { Server, ServerCredentials, ServerUnaryCall, status } from "grpc";
-
+/**
+ * Sipahi Helpers
+ */
+import "./utils/env";
 import { getServiceNames, loadPackage, lookupPackage } from "./utils/loader";
-
+import { Method, Validate, Controller } from "./utils/decorators";
+import { error } from "./utils/error";
+/**
+ * Nestjs Core
+ */
+import { AppModule } from "./ioc/module";
+import { NestFactory } from "@nestjs/core";
+import { Injectable } from "@nestjs/common";
+/**
+ * IOC Container
+ */
+import { initContainer } from "./ioc/";
+/**
+ * Input Validation
+ */
 import { plainToClass } from "class-transformer";
 import { validate } from "class-validator";
-import { initIoc } from "./ioc/container";
-
-import { Method, Validate } from "./utils/decorators";
-
-import { error } from "./utils/error";
-
 /**
- * Base Services
+ * Default Services
  */
+import { Lang } from "./services/lang";
 import { Logger } from "./services/logger";
+import { initLocalize, trans, getLocale, setLocale } from "./utils/localize";
+import { LocaleType } from "./utils/types";
 
-export { Method, Validate, status, error, Logger };
+import { LocalError } from "./utils/errors/helper";
 
 interface Proto {
   path: string;
   package: string;
 }
 
+declare type ErrHookHandler = (myArgument: { service: string; method: string; type: "validation" | "service"; error: any }) => any;
+
 export class Sipahi {
+  private errHook: ErrHookHandler;
+  private localeKey: string | undefined;
   private protoList: Proto[];
   private providers: Function[];
 
@@ -35,11 +50,20 @@ export class Sipahi {
     this.protoList = [];
     this.providers = [];
     this.initialize();
-    this.initServices();
+    this.initLogger();
+    this.localeKey = "locale";
   }
 
-  private initServices() {
+  private initLogger() {
     this.addProvider(Logger);
+    this.addProvider(Lang);
+  }
+
+  public useLocale(params: LocaleType) {
+    initLocalize(params);
+    if (params.metadataKey) {
+      this.localeKey = params.metadataKey;
+    }
   }
 
   private initialize() {
@@ -61,13 +85,16 @@ export class Sipahi {
     this.providers = [...providers];
   }
 
-  private syncMethods() {
-    const { container, serverMethods } = initIoc(this.providers);
+  private async syncMethods() {
+    const self = this;
+    const { serverMethods } = initContainer(this.providers);
+
+    const app = await NestFactory.createApplicationContext(AppModule, { logger: false });
 
     let resolveClasses: { [key: string]: any } = {};
 
     serverMethods.forEach((serverMethod) => {
-      resolveClasses[serverMethod.className] = container.get(serverMethod.className);
+      resolveClasses[serverMethod.className] = app.get(serverMethod.className);
     });
 
     const result: { [key: string]: any } = {};
@@ -76,31 +103,50 @@ export class Sipahi {
         if (!result[method.proto.service]) {
           result[method.proto.service] = {};
         }
-
         result[method.proto.service][method.proto.method] = function (call: ServerUnaryCall<any>, callback) {
+          if (call.metadata.get(self.localeKey)[0]) {
+            setLocale(call.metadata.get(self.localeKey)[0].toString());
+          }
           if (method.validator) {
             let classData = plainToClass(method.validator, call.request);
+
             validate(classData)
               .then((errors) => {
                 if (errors.length > 0) {
+                  /*
+                  let errMessage = JSON.stringify(
+                    errors.map((error) => {
+                      let obj: any = {};
+                      obj[error.property] = trans(serverMethod.className + "." + error.target.constructor.name + "." + error.property + "." + Object.keys(error.constraints)[0]);
+                      return obj;
+                    })
+                  );
+                  self.errHook({ service: method.proto.service, method: method.proto.method, type: "validation", message: errMessage });
                   callback({
-                    message: JSON.stringify(
-                      errors.map((error) => {
-                        let obj: any = {};
-                        obj[error.property] = Object.values(error.constraints)[0];
-                        return obj;
-                      })
-                    ),
+                    message: errMessage,
                     code: status.INVALID_ARGUMENT,
                   });
+                  */
+                  let errFn = self.errHook({ service: method.proto.service, method: method.proto.method, type: "validation", error: errors });
+                  callback(errFn, null);
                 } else {
                   resolveClasses[serverMethod.className]
                     [method.funcName](call.request, call.metadata)
+
                     .then((resp) => {
                       callback(null, resp);
                     })
                     .catch((err) => {
-                      callback({ message: err.message, code: err.code }, null);
+                      let errFn = self.errHook({ service: method.proto.service, method: method.proto.method, type: "service", error: err });
+                      callback(errFn, null);
+                      /*
+                      if (err instanceof LocalError) {
+                        self.errHook({ service: method.proto.service, method: method.proto.method, type: "service", message: err.message, stacktrace: err });
+                      } else {
+                        self.errHook({ service: method.proto.service, method: method.proto.method, type: "server", message: err.message, stacktrace: err });
+                      }
+
+                      callback({ message: trans(err.message), code: err.code }, null);*/
                     });
                 }
               })
@@ -114,7 +160,15 @@ export class Sipahi {
                 callback(null, resp);
               })
               .catch((err) => {
-                callback({ message: err.message, code: err.code }, null);
+                let errFn = self.errHook({ service: method.proto.service, method: method.proto.method, type: "service", error: err });
+                callback(errFn, null);
+                /*
+                if (err instanceof LocalError) {
+                  self.errHook({ service: method.proto.service, method: method.proto.method, type: "service", message: err.message, stacktrace: err });
+                } else {
+                  self.errHook({ service: method.proto.service, method: method.proto.method, type: "server", message: err.message, stacktrace: err });
+                }
+                callback({ message: trans(err.message), code: err.code }, null);*/
               });
           }
         };
@@ -150,7 +204,7 @@ export class Sipahi {
     }
 
     return new Promise(async (resolve, reject) => {
-      this.syncMethods();
+      await this.syncMethods();
       this.server.bindAsync(args.host + ":" + args.port, ServerCredentials.createInsecure(), (err) => {
         if (err) {
           return reject(err);
@@ -164,4 +218,12 @@ export class Sipahi {
   close() {
     return this.server.forceShutdown();
   }
+
+  onError(func: ErrHookHandler) {
+    this.errHook = func;
+  }
 }
+
+export { Logger, Lang, Injectable, Controller };
+
+export { Method, Validate, status, error };

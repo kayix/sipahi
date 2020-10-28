@@ -7,8 +7,10 @@
     "experimentalDecorators": true,
     "target": "es6",
     "sourceMap": false,
+    "resolveJsonModule": true,
     "outDir": "./dist",
-    "baseUrl": "."
+    "baseUrl": ".",
+    "esModuleInterop": true
   },
   "include": ["src"],
   "exclude": ["node_modules", "**/*.test.ts"]

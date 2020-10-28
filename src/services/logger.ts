@@ -1,29 +1,13 @@
-import * as pino from "pino";
-import { injectable } from "inversify";
+import { logger } from "../utils/logger";
 import { Logger as ILogger } from "pino";
+import { Injectable } from "@nestjs/common";
 
-@injectable()
+@Injectable()
 export class Logger {
   logger: ILogger;
 
   constructor() {
-    const baseLogger = pino({
-      ...{
-        prettyPrint: process.env.NODE_ENV !== "production",
-        timestamp: true,
-        messageKey: "message",
-        base: null,
-        formatters: {
-          level(label) {
-            return {
-              level: label,
-            };
-          },
-        },
-      },
-    });
-
-    this.logger = baseLogger.child({ level: process.env.NODE_ENV === "production" ? "warn" : "debug" });
+    this.logger = logger;
   }
 
   fatal(msg: string, ...args: any[]) {

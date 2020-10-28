@@ -1,11 +1,16 @@
 import { resolve } from "path";
 import { inject, injectable } from "inversify";
-import { IsEmail } from "class-validator";
+import { IsEmail, IsInt } from "class-validator";
 import { Method, Validate } from "../src/utils/decorators";
 import { Sipahi, Logger } from "../src/server";
 
 class LoginInput {
   @IsEmail()
+  name: string;
+}
+
+class HelloInput {
+  @IsInt()
   name: string;
 }
 
@@ -25,7 +30,7 @@ export class TestService {
     this.myService = myService;
   }
 
-  @Validate(LoginInput)
+  @Validate(HelloInput)
   @Method("HelloService", "Hello")
   getHello(request: { name: string }, { logger }) {
     this.logger.error("aaaa", 22, 242, 2424242);
@@ -33,8 +38,16 @@ export class TestService {
     return new Promise((resolve, reject) => {
       resolve({ message: request.name });
     });
+  }
 
-    //  return error("blocked system 13 moruk :D", status.DATA_LOSS);
+  @Validate(LoginInput)
+  @Method("HelloService", "Login")
+  getLogin(request: { name: string }, { logger }) {
+    this.logger.error("aaaa", 22, 242, 2424242);
+    this.myService.test();
+    return new Promise((resolve, reject) => {
+      resolve({ message: request.name });
+    });
   }
 }
 
